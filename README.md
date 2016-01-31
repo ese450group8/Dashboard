@@ -1,9 +1,10 @@
 # Files for HealthKit Dashboard
 
-These are the html/css/js files used to create the web application for ESE Senior Design
+These are the html/css/js files used to create the web application for ESE Senior Design. They must be run with Python
 
-# Opening and Testing html files in your browser
+# Running files with Python
 
-1. Right-click the file from the repository (i.e. populationLevel.html) and hit "copy link address"
-2. Go to rawgit.com and paste the link address into the top bar
-3. Choose one of the lower URLs and paste it in browser to check
+1. Open up command prompt
+2. Go to the folder with all the files
+3. Type: python -m SimpleHTTPServer 1111
+4. Open up a browser and type in directory: localhost:1111
