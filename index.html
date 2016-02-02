@@ -401,15 +401,7 @@
                   }
                 });
               });
-              // remove rows with same patient ID
-              var seen = {}
-              $('table tr').each(function() {
-                var txt = $(this).text();
-                if(seen[txt])
-                  $(this).remove();
-                else
-                  seen[txt] = true;
-              }
+             
               </script>
             </tbody>
           </table>
