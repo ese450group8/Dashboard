@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Infant mortality since 2000</title>
+
+    <style>
+      body {
+        font-family: "Verdana", sans-serif;
+      }
+
+      #container {
+        max-width: 750px;
+        padding: 0 0;
+        margin: 0 auto;
+      }
+
+      h1 {
+        text-transform: uppercase;
+        font-weight: 600;
+        color: rgb(0, 153, 255);
+        margin: 0, 0, 0, 20px;
+      }
+
+      p {
+        line-height: 1.5;
+      }
+
+      a, a:visited {
+        text-decoration: none;
+        color: rgb(0, 153, 255);
+      }
+
+      a:hover {
+        background: rgba(0, 153, 255, 0.2);
+      }
+
+      th {
+        font-weight: 300;
+        color: white;
+        text-transform: uppercase;
+        background: rgb(0, 153, 255);
+        padding: 5px 7px 5px 7px;
+      }
+
+      tr {
+        border-width: 1px;
+        border-color: grey;
+      }
+
+      td {
+        text-align: center;
+        padding: 10px 7px 10px 7px;
+        /*border: 1px solid grey;*/
+        background-color: rgba(230, 231, 233, 0.4);
+      }
+
+
+    </style>
+
+  </head>
+  <body>
+    <div id="container">
+    <h1>Infant mortality since 2000</h1>
+    <p>This table shows how infant mortality has decreased around the world during the last 13 years, as the GDP Per Capita increased. </p>
+    <p>Sources: <a href="http://www.who.int/gho/en/">Global Health Observatory (GHO)</a>, World Health Organization. <a href="http://data.worldbank.org/">World Bank</a>.</p>
+    <div id="table"></div>
+    </div>
+
+  </body>
+
+    <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+
+    <!-- load the function file you need before you call it... -->
+    <script type="text/javascript" src="tabulate.js"></script>
+
+    <script type="text/javascript">
+      //Load in contents of CSV file, and do things to the data.
+      d3.csv("smallTest.csv", function(error, myData) {
+        if (error) {
+          console.log("Had an error loading file.");
+        }
+        // Use simpler data as values, not objects.
+        var myArray = [];
+        myData.forEach(function(d, i){
+        // now we add another data object value, a calculated value.
+        // Add a new array with the values of each:
+        for (var index in myData) {
+          if (myData[index].ID == 517) {//thisID && parseInt(data[index].time.split("/")[0]) == thisMonth) {
+          // push objects we want
+          myArray.push([d.ID, d.height, d.weight, d.BMI, d.gender, d.time, d.glucose, d.A1C_value, d.A1C_date, d.last_BP, d.last_optho, d.last_podiatry]);
+        }
+      }
+        console.log(myData);
+        console.log(myArray);
+        // You could also have made the new array with a map function!
+        var table = d3.select("#table").append("table");
+        var header = table.append("thead").append("tr");
+        header
+          .selectAll("th")
+          .data(["ID", "height", "weight", "BMI", "gender", "time", "glucose", "A1C value", "A1C date", "last BP", "last optho", "last podiatry"])
+          .enter()
+          .append("th")
+          .text(function(d) { return d; });
+        var tablebody = table.append("tbody");
+        rows = tablebody
+          .selectAll("tr")
+          .data(myArray)
+          .enter()
+          .append("tr");
+        // We built the rows using the nested array - now each row has its own array.
+        cells = rows.selectAll("td")
+          // each row has data associated; we get it and enter it for the cells.
+          .data(function(d) {
+            console.log(d);
+            return d;
+          })
+          .enter()
+          .append("td")
+          .text(function(d) {
+            return d;
+          });
+
+        var td = d3.selectAll("tbody tr").selectAll("td");
+        td.style("font-weight", function(d, i) {
+          return i ? null : "bold"; });
+
+        var td = d3.selectAll("tbody tr").selectAll("td");
+        td.style("color", function(d, i) {
+            return i ? null : "black"; });
+
+      });
+    </script>
+
+</html>
