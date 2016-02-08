@@ -77,28 +77,53 @@
     <script type="text/javascript">
       // array to keep track of user IDs
       var IDArray = [];
-      //Load in contents of CSV file and do things to the data.
+      //Load in contents of CSV file and do things to the data from this file
       d3.csv("smallTest.csv", function(error, myData) {
         if (error) {
           console.log("Had an error loading file.");
         }
         // Use simpler data as values, not objects.
         var myArray = [];
-
-        myData.forEach(function(d, i){
         // now we add another data object value, a calculated value.
         // Add a new array with the values of each:
-        // we want to only give one row of each patient ID, so set a temporary ID and add it to IDArray if it's not in there already
+        myData.forEach(function(d, i){
+        
+        // Set a temporary ID and add it to IDArray if it's not in there already
         var temporaryID = d.ID;
+        // Set temporary variables for values that may change over time. Update if different than previous
+        var newHeight;
+        var newWeight;
+        var newBMI;
+        var newTime;
+        var newA1Cval;
+        var newA1Cdate;
+        var newLastBP;
+        var newLastOptho;
+        var newLastPod;
+
         // function to check if this ID is already in in IDArray. Does not work on IE6,7,8
         function isIncluded(arr, obj) {
           return (arr.indexOf(obj) != -1);
         }
+        // calculate average of glucose readings for each ID within this file
+        var patSum = 0;
+        var patAvg;
+        var temp = [];
+        for (var index in myData) {
+          if (myData[index].ID == temporaryID) {
+            temp.push(myData[index]); // push objects for calculating length
+            patSum = patSum + parseInt(myData[index].glucose);
+          }
+        }
+        patAvg = patSum / (temp.length + 1);
 
+        // check to see if any variables were updated so that only the most updated appear first
+
+        
         if (!isIncluded(IDArray, temporaryID)) {
           IDArray.push(temporaryID);
         //console.log(IDArray);
-          myArray.push([d.ID, d.height, d.weight, d.BMI, d.gender, d.time, d.glucose, d.A1C_value, d.A1C_date, d.last_BP, d.last_optho, d.last_podiatry]);
+          myArray.push([d.ID, d.height, d.weight, d.BMI, d.gender, d.time, Math.round(100*patAvg)/100, d.A1C_value, d.A1C_date, d.last_BP, d.last_optho, d.last_podiatry]);
         }
         });
         console.log(myData);
@@ -108,7 +133,7 @@
         var header = table.append("thead").append("tr");
         header
           .selectAll("th")
-          .data(["ID", "height", "weight", "BMI", "gender", "time", "glucose", "A1C value", "A1C date", "last BP", "last optho", "last podiatry"])
+          .data(["ID", "height", "weight", "BMI", "gender", "time", "avg glucose", "A1C value", "A1C date", "last BP", "last optho", "last podiatry"])
           .enter()
           .append("th")
           .text(function(d) { return d; });
