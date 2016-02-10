@@ -22,7 +22,7 @@ These are the html/css/js files used to create the web application for ESE Senio
 
 # specifications for the population section of web app
 
-- Make each row only one patient
+- (solved) Make each row only one patient
   - right now, it's multiple rows for patient. We don't want that
 - Outliers: delete ones greater than 700
 - Columns helpful in Population Data
