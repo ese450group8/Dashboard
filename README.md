@@ -4,12 +4,13 @@ These are the html/css/js files used to create the web application for ESE Senio
 
 # Running files with Python
 
+Must have access to the test csv files in the same folder
 1. Open up command prompt
 2. Go to the folder with all the files
 3. Type: python -m SimpleHTTPServer 1111
 4. Open up a browser and type in directory: localhost:1111
-* Access to the file smallTest.csv, etc., must be in the same folder
-* 
+
+
 # specifications for the patient section of web app
 
 - (solved) Break the line in the graph where there are gaps of data (no data)
