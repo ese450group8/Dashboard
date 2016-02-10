@@ -40,3 +40,8 @@ These are the html/css/js files used to create the web application for ESE Senio
     - Last BP
     - Last Optho
     - Last podiatry
+
+# notes
+breakfast: 5 - 11
+lunch: 11 - 16
+dinner: 16 - 24
