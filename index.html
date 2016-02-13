@@ -217,8 +217,7 @@
                     </style>
                   </tr>
                   <script>
-                  // same function as below, calculate preprandial, postprandial and random avgs
-
+                  // function same as below to calculate preprandial, postprandial and random avgs
                   d3.csv("mealData.csv", function(mdata) {
                     var mealData = [];
                     for (var index in mdata) {
@@ -239,12 +238,6 @@
                       var random = [];
                       var temp = [];
                       var glucData = [];
-                      // need these to keep track of averages
-
-                      var sumFasting;
-                      var sumPreprandial;
-                      var sumPostprandial;
-                      var sumRandom;
 
                       for (var glucose in gdata) {
                         glucData.push(gdata[glucose]);
@@ -271,125 +264,159 @@
                           }
                         }
                       }
+                      
+                      // array to keep track of patient IDs
+                      var IDArray = [];
+                      gdata.forEach(function(d,i) {
+                        // need these to keep track of sums and calculate avg
+                        var arrFast = [];
+                        var arrPre = [];
+                        var arrPost = [];
+                        var arrRand = [];
+                        var tempID = d.ID;
+                        // function to check if this ID is already in IDArray. Does not work on IE6, 7, 8.
+                        function isIncluded(arr,obj) {
+                          return (arr.indexOf(obj) != -1);
+                        }
 
+                        var table = document.getElementById("dataTable");
+                        var row = table.insertRow(table.rows.length);
+                        // check if ID is already used, so only one patient summary is shown per table row
+                        if (!isIncluded(IDArray, tempID)) {
+                          // push tempID to IDArray to log it
+                          IDArray.push(tempID);
+    
+                          // calculate averages of fasting, pre, post, etc.
+                          for (var index in glucData) {
+                            if (glucData[index].ID == tempID && glucData[index].flag == 'Postprandial') {
+                              arrPost.push(glucData[index].glucose);
+                            }
+                            if (glucData[index].ID == tempID && glucData[index].flag == 'Preprandial') {
+                              arrPre.push(glucData[index].glucose);
+                            }
+                            if (glucData[index].ID == tempID && glucData[index].flag == 'Random') {
+                              arrRand.push(glucData[index].glucose);
+                            }
+                            if (glucData[index].ID == tempID && glucData[index].flag == 'Fasting') {
+                              arrFast.push(glucData[index].glucose);
+                            }
+                          }
+                          //console.log(arrPost);
+                          // calculate sums / averages
+                          var sumPost = 0;
+                          for (var i = 0; i < arrPost.length; i++) {
+                            sumPost += parseInt(arrPost[i]);
+                            //console.log(sumPost);
+                          }
+                          var avgPost = Math.round((sumPost/arrPost.length)*100/100);
 
+                          var sumPre = 0;
+                          for (var i = 0; i < arrPre.length; i++) {
+                            sumPre += parseInt(arrPre[i]);
+                          }
+                          var avgPre = Math.round((sumPre/arrPre.length)*100/100);
 
+                          var sumRand = 0;
+                          for (var i = 0; i < arrRand.length; i++) {
+                            sumRand += parseInt(arrRand[i]);
+                          }
+                          var avgRand = Math.round((sumRand/arrRand.length)*100/100);
+                          
+                          var sumFast = 0;
+                          for (var i = 0; i < arrFast.length; i++) {
+                            sumFast += parseInt(arrFast[i]);
+                          }
 
+                          var avgFast = Math.round((sumFast/arrFast.length)*100/100);
 
+                          var cell1 = row.insertCell(0);
+                          row.onclick = function() {document.getElementById("patID").value = d.ID;};
+                          var cell2 = row.insertCell(1);
+                          var cell3 = row.insertCell(2);
+                          var cell4 = row.insertCell(3);
+                          var cell5 = row.insertCell(4);
+                          // cell.onclick = ...
+                          var cell6 = row.insertCell(5);
+                          var cell7 = row.insertCell(6);
+                          var cell8 = row.insertCell(7);
+                          var cell9 = row.insertCell(8);
+                          var cell10 = row.insertCell(9);
+                          var cell11 = row.insertCell(10);
+                          var cell12 = row.insertCell(11);
+                          var cell13 = row.insertCell(12);
+                          var cell14 = row.insertCell(13);
+                          var cell15 = row.insertCell(14);
+                          var cell16 = row.insertCell(15);
 
-
-
-
-
-
-
-
-
-
-
-                  // array to keep track of patient IDs
-                  var IDArray = [];
-                  d3.csv("glucoseData.csv", function(data) {
-                    data.forEach(function(d,i) {
-                      var tempID = d.ID;
-                      // function to check if this ID is already in IDArray. Does not work on IE6, 7, 8.
-                      function isIncluded(arr,obj) {
-                        return (arr.indexOf(obj) != -1);
-                      } 
-                      var table = document.getElementById("dataTable");
-                      var row = table.insertRow(table.rows.length);
-                      // check if ID is already used, so only one patient summary is shown per table row
-                      if (!isIncluded(IDArray, tempID)) {
-                        // push tempID to IDArray to log it
-                        IDArray.push(tempID);
-
-                        var cell1 = row.insertCell(0);
-                        row.onclick = function() {document.getElementById("patID").value = d.ID;};
-                        var cell2 = row.insertCell(1);
-                        var cell3 = row.insertCell(2);
-                        var cell4 = row.insertCell(3);
-                        var cell5 = row.insertCell(4);
-                        // cell.onclick = ...
-                        var cell6 = row.insertCell(5);
-                        var cell7 = row.insertCell(6);
-                        var cell8 = row.insertCell(7);
-                        var cell9 = row.insertCell(8);
-                        var cell10 = row.insertCell(9);
-                        var cell11 = row.insertCell(10);
-                        var cell12 = row.insertCell(11);
-                        var cell13 = row.insertCell(12);
-                        var cell14 = row.insertCell(13);
-                        var cell15 = row.insertCell(14);
-                        var cell16 = row.insertCell(15);
-
-                        cell1.innerHTML = d.ID;
-                        cell2.innerHTML = "hght";
-                        cell3.innerHTML = "wght";
-                        cell4.innerHTML = "bmi";
-                        cell5.innerHTML = "gndr";
-                        cell6.innerHTML = "last reading";
-                        cell7.innerHTML = "fast avg";
-                        cell8.innerHTML = "pre avg";
-                        cell9.innerHTML = "post avg";
-                        cell10.innerHTML = "rand avg";
-                        cell11.innerHTML = "av";
-                        cell12.innerHTML = "ad";
-                        cell13.innerHTML = "bp";
-                        cell14.innerHTML = "optho";
-                        cell15.innerHTML = "pod";
-                        cell16.innerHTML = "score";
-                      }
-                    })
-                  })
-                </script>
-              </tbody>
-            </table>
-          </div>
-        </div>
+                          cell1.innerHTML = d.ID;
+                          cell2.innerHTML = "hght";
+                          cell3.innerHTML = "wght";
+                          cell4.innerHTML = "bmi";
+                          cell5.innerHTML = "gndr";
+                          cell6.innerHTML = "last reading";
+                          cell7.innerHTML = avgFast;
+                          cell8.innerHTML = avgPre;
+                          cell9.innerHTML = avgPost;
+                          cell10.innerHTML = avgRand;
+                          cell11.innerHTML = "av";
+                          cell12.innerHTML = "ad";
+                          cell13.innerHTML = "bp";
+                          cell14.innerHTML = "optho";
+                          cell15.innerHTML = "pod";
+                          cell16.innerHTML = "score";
+                        }
+                      })
+})
+})
+</script>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- /.row -->
+<div class="row">
+  <div class="col-lg-12">
+    <h1 class="page-header"> Patient Level Summary </h1>
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <!-- Write at top of Screen if you want -->
       </div>
-    </div>
-  </div>
-  <!-- /.row -->
-  <div class="row">
-    <div class="col-lg-12">
-      <h1 class="page-header"> Patient Level Summary </h1>
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <!-- Write at top of Screen if you want -->
-        </div>
-        <!retrieving data from CSV file>
-        <head>
-          <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
-          <script src="http://code.jquery.com/jquery-1.8.3.min.js" type="text/javascript" charset="utf-8"></script>
-          <script src="jquery.tipsy.js" type="text/javascript" charset="utf-8"></script>
-          <link rel="stylesheet" href="http://onehackoranother.com/projects/jquery/tipsy/stylesheets/tipsy.css" type="text/css" title="no title" charset="utf-8"/>
-          <style type="text/css">
-          .axis path,
-          .axis line {
-            fill: none;
-            stroke: #000;
-            shape-rendering: crispEdges;
-            opacity: 1;
-          }
+      <!retrieving data from CSV file>
+      <head>
+        <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+        <script src="http://code.jquery.com/jquery-1.8.3.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="jquery.tipsy.js" type="text/javascript" charset="utf-8"></script>
+        <link rel="stylesheet" href="http://onehackoranother.com/projects/jquery/tipsy/stylesheets/tipsy.css" type="text/css" title="no title" charset="utf-8"/>
+        <style type="text/css">
+        .axis path,
+        .axis line {
+          fill: none;
+          stroke: #000;
+          shape-rendering: crispEdges;
+          opacity: 1;
+        }
 
-          .axis text { font-size:10px; }
+        .axis text { font-size:10px; }
 
-          body { font: 12px sans-serif; }
-          .circles { opacity: .5; }
+        body { font: 12px sans-serif; }
+        .circles { opacity: .5; }
 
-          .tipsy { font-size:11px; margin-top:-10px;}
+        .tipsy { font-size:11px; margin-top:-10px;}
 
-          .guide line {
-            fill: none;
-            stroke: #000;
-            shape-rendering: crispEdges;
-            opacity: 0;
-          }
-          </style>
-        </head>
-        <body>
-          <div id="chart">
-            <script type="text/javascript">
+        .guide line {
+          fill: none;
+          stroke: #000;
+          shape-rendering: crispEdges;
+          opacity: 0;
+        }
+        </style>
+      </head>
+      <body>
+        <div id="chart">
+          <script type="text/javascript">
               // Global Variables
               var thisID;
               var thisMonth;
@@ -536,7 +563,6 @@
                 recordMonth();
                 recordYear();
 
-                var patSum = 0;
                 d3.csv("mealData.csv", function(mdata) {
                   var mealData = [];
                   for (var index in mdata) {
@@ -601,11 +627,6 @@
                         }
                       }
                     }
-                    //var patAvg = patSum / (temp.length);
-                    //for (var index in temp) {
-                      // Flag is true when the patient's glucose reading is higher than normal
-                    //  temp[index].flag = temp[index].glucose > patAvg;
-                    //}
 
                     // style the circles, set their locations based on data
                     var circles =
@@ -696,56 +717,56 @@
 
                     $(".circles").tipsy({ gravity: 's', })
                   })
-                })
-              }
-            </script>
+})
+}
+</script>
 
-            <br><label>Enter Patient ID:</label><br>
-            <input type="text" list="patientID" id="patID">
-            <datalist id="patientID">
-            </datalist>
-            <br><br><label>Enter Month:</label><br>
-            <input type="text" list="monthID" id="moID">
-            <datalist id="monthID">
-            </datalist>
-            <br><br><label>Enter Year:</label><br>
-            <input type="text" list="yearID" id="yID">
-            <datalist id="yearID">
-            </datalist>
-            <br><br>
-            <input type="radio" name="filter" id="All">All
-            <input type="radio" name="filter" id="Postprandial">Postprandial
-            <input type="radio" name="filter" id="Preprandial">Preprandial
-            <input type="radio" name="filter" id="Random">Random
-            <br><br><button onclick="updateGraph()">Submit</button>
+<br><label>Enter Patient ID:</label><br>
+<input type="text" list="patientID" id="patID">
+<datalist id="patientID">
+</datalist>
+<br><br><label>Enter Month:</label><br>
+<input type="text" list="monthID" id="moID">
+<datalist id="monthID">
+</datalist>
+<br><br><label>Enter Year:</label><br>
+<input type="text" list="yearID" id="yID">
+<datalist id="yearID">
+</datalist>
+<br><br>
+<input type="radio" name="filter" id="All">All
+<input type="radio" name="filter" id="Postprandial">Postprandial
+<input type="radio" name="filter" id="Preprandial">Preprandial
+<input type="radio" name="filter" id="Random">Random
+<br><br><button onclick="updateGraph()">Submit</button>
 
-            <script type="text/javascript">
-              var patOptions = '';
-              var monthOptions = '';
-              var yearOptions = '';
-              d3.csv("glucoseData.csv", function(data) {
-                for (var index in data) {
-                  // Add PatientID option if it doesn't exist already
-                  if (patOptions.indexOf(data[index].ID) == -1) {
-                    patOptions += '<option value="' + data[index].ID + '" />';
-                  }
-                }
-                document.getElementById('patientID').innerHTML = patOptions;
-              });
+<script type="text/javascript">
+var patOptions = '';
+var monthOptions = '';
+var yearOptions = '';
+d3.csv("glucoseData.csv", function(data) {
+  for (var index in data) {
+    // Add PatientID option if it doesn't exist already
+    if (patOptions.indexOf(data[index].ID) == -1) {
+      patOptions += '<option value="' + data[index].ID + '" />';
+    }
+  }
+  document.getElementById('patientID').innerHTML = patOptions;
+});
 
-              for (var i = 0; i < 12; i++) {
-                monthOptions += '<option value="' + (i+1) + '" />';
-                yearOptions += '<option value ="' + (2005+i) + '" />';
-              };
-              document.getElementById('monthID').innerHTML = monthOptions;
-              document.getElementById('yearID').innerHTML = yearOptions;
-              document.getElementById("All").checked = true;
-            </script>
-          </div>
-        </body>
-      </div>
-    </div>
-  </div>
+for (var i = 0; i < 12; i++) {
+  monthOptions += '<option value="' + (i+1) + '" />';
+  yearOptions += '<option value ="' + (2005+i) + '" />';
+};
+document.getElementById('monthID').innerHTML = monthOptions;
+document.getElementById('yearID').innerHTML = yearOptions;
+document.getElementById("All").checked = true;
+</script>
+</div>
+</body>
+</div>
+</div>
+</div>
 </body>
 </html>
 
