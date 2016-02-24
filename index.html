@@ -14,7 +14,7 @@
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
 
 
-  <link href="align.css" rel="stylesheet">
+  <link href="test.css" rel="stylesheet">
 
 
   <!-- Tooltip css for hoverboxes -->
@@ -148,10 +148,11 @@
                 <input type="radio" name="tablefilter" id="PostprandialTable">Postprandial
                 <input type="radio" name="tablefilter" id="FastingTable">Fasting
                 <input type="radio" name="tablefilter" id="PreprandialTable">Preprandial
-                <input type="radio" name="tablefilter" id="RandomTable">Random
+                <input type="radio" name="tablefilter" id="RandomTable">Random<br><br>
 
-                <br><br><label> <font size="5" color="green"> Threshold Filter </font></label>
-                <br><label>Above:</label><br>
+                <div id="element1"><label><font size="5" color="green"> Threshold Filter </font></label><br>
+
+                <label>Above:</label><br>
                 <input type="text" id="above">&nbsp;<label>mg/dL</label>
                 <br><br><label>Below:</label><br>
                 <input type="text" id="below">&nbsp;<label>mg/dL</label><br>
@@ -162,17 +163,20 @@
                 <br><br><label>Enter Year:</label><br>
                 <input type="text" list="yearID" id="yIDTable">
                   <datalist id="yearIDTable">
-                  </datalist>
-                
-                <br><br><button onclick="updateTable()">Submit</button><br><br>
+                  </datalist>      
+                <br><br><button onclick="updateTable()">Submit</button><br><br></div>
 
 
-              <!-- search for patients whose average monthly glucose has increased by X amount -->
+              	<!-- search for patients whose average monthly glucose has increased by X amount -->
 
-                <label> <font size="5" color="green" > Monthly Increase Search </font></label> 
-                <br><label>Patients whose average monthly glucose level has increased by:</label><br>
+                <div id="element2"><label> <font size="5" color="green" > Monthly Increase Search </font></label> <br>
+                <label>Patients whose average monthly glucose level has increased by:</label><br>
                 <input type="text" id="monthlyAvgCompare">&nbsp;<label>mg/dL</label><br>
-                <br><button onclick="updateTableMonthly()">Submit</button><br><br>
+                <br><button onclick="updateTableMonthly()">Submit</button><br><br></div><br>
+
+
+
+
               <table class="table table-striped table-bordered table-hover" id = "dataTable">
                 <thead>
                   <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
@@ -1435,6 +1439,10 @@
             })
           })
         });
+
+		
+
+
 
           }
 
