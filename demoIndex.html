@@ -220,11 +220,6 @@
                         <span class = "hoverToolTip"> Glucose measured at random times, or relative time of meal not given </span>
                       </div>
                     </th>
-                    <th> 
-                      <div class = "headerHover"> Priority Score
-                        <span class = "hoverToolTip"> Score based on number of times patient's sugar levels were below 80 or above 200 </span>
-                      </div>
-                    </th>
 
                     <!-- CSS for hover -->
                     <style>
@@ -433,7 +428,6 @@
                           var cell4 = row.insertCell(3);
                           var cell5 = row.insertCell(4);
                           // cell.onclick = ...
-                          var cell6 = row.insertCell(5);
 
                           // check for not available
                           if (isNaN(parseFloat(avgFast))) {
@@ -453,7 +447,6 @@
                           cell3.innerHTML = avgPre;
                           cell4.innerHTML = avgPost;
                           cell5.innerHTML = avgRand;
-                          cell6.innerHTML = '0';
                         }
                       })
                     })
@@ -1213,7 +1206,6 @@ function recordBelow() {
             var cell4 = row.insertCell(3);
             var cell5 = row.insertCell(4);
             // cell.onclick = ...
-            var cell6 = row.insertCell(5);
 
             // check for not available
             if (isNaN(parseFloat(avgFast))) {
@@ -1233,7 +1225,6 @@ function recordBelow() {
             cell3.innerHTML = avgPre;
             cell4.innerHTML = avgPost;
             cell5.innerHTML = avgRand;
-            cell6.innerHTML = '0';
 
           }
           // function to update the Table according to specific thresholds set by practitioners
@@ -1440,7 +1431,6 @@ function recordBelow() {
                     var cell4 = row.insertCell(3);
                     var cell5 = row.insertCell(4);
                     // cell.onclick = ...
-                    var cell6 = row.insertCell(5);
 
                     // check for not available
                     if (isNaN(parseFloat(avgFast))) {
@@ -1460,7 +1450,6 @@ function recordBelow() {
                     cell3.innerHTML = avgPre;
                     cell4.innerHTML = avgPost;
                     cell5.innerHTML = avgRand;
-                    cell6.innerHTML = '0';
                   }
                 }) // ends gdatafilter for each
               })
