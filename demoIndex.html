@@ -268,84 +268,89 @@
                     }
                   }
                   // function same as below to calculate preprandial, postprandial and random avgs
-                  d3.csv("demoMeal.csv", function(meal) {
-                    d3.csv("demoMeal.csv", function(breakfast) {
-                      for (var b = breakfast.length - 1; b > -1; b--) {
-                        for (var m = meal.length - 1; m > -1; m--) {
-                          if (meal[m].ID === breakfast[b].ID &&
-                            meal[m].time.slice(0,10) === breakfast[b].time.slice(0,10)) {
-                            var mHour = parseInt(meal[m].time.slice(11,13));
-                          var bHour = parseInt(breakfast[b].time.slice(11,13));
-                          var mMinute = parseInt(meal[m].time.slice(14,16));
-                          var bMinute = parseInt(breakfast[b].time.slice(14,16));
-                          var mSecond = parseInt(meal[m].time.slice(17,19));
-                          var bSecond = parseInt(breakfast[b].time.slice(17,19));
 
-                          if (mHour < bHour) {
-                            breakfast.splice(b, 1);
-                            break;
-                          } else if (mHour == bHour) {
-                            if (mMinute < bMinute) {
-                              breakfast.splice(b, 1);
+                  d3.csv("demoMeal.csv", function(mdata) {
+                    // filter meals to breakfast-only to later determine which glucose measures are 'fasting'
+                    var breakfast = [];
+                    var date;
+                    var id;
+                    var hour;
+                    var minute;
+                    var second;
+                    var nextHour;
+                    var nextMinute;
+                    var nextSecond;
+                    for (var i = 0; i < mdata.length; i++) {
+                      date = mdata[i].time.slice(0,10);
+                      id = mdata[i].ID;
+                      hour = parseInt(mdata[i].time.slice(11,13));
+                      minute = parseInt(mdata[i].time.slice(14,16));
+                      second = parseInt(mdata[i].time.slice(17,19));
+                      if (mdata[i].time.slice(11,13) >= 3) {
+                        mdata[i].flag = 'Breakfast';
+                        // compare other mealtimes of the same date with this mealtime to determine which is breakfast
+                        for (var j = 0; j < mdata.length; j++) {
+                          if (mdata[j].ID == id && mdata[j].time.slice(0,10) === date) {
+                            nextHour = parseInt(mdata[j].time.slice(11,13));
+                            nextMinute = parseInt(mdata[j].time.slice(14,16));
+                            nextSecond = parseInt(mdata[j].time.slice(17,19));
+
+                            if (nextHour < hour) {
+                              mdata[i].flag = 'notBreakfast';
                               break;
-                            } else if (mMinute == bMinute) {
-                              if (mSecond < bSecond) {
-                                breakfast.splice(b, 1);
+                            } 
+                            else if (nextHour == hour) {
+                              if (nextMinute < minute) {
+                                mdata[i].flag = 'notBreakfast';
                                 break;
-                              } else if (mSecond == bSecond) {
-                                continue;
+                              } 
+                              else if (nextMinute == minute) {
+                                if (nextSecond < second) {
+                                  mdata[i].flag = 'notBreakfast';
+                                  break;
+                                }
                               }
                             }
-                          } else {
-                            meal.splice(m, 1);
                           }
-                        }
+                        } 
+                      } 
+                      else {
+                        mdata[i].flag = 'notBreakfast';
                       }
                     }
-                    breakfast = breakfast.filter(function(item) {
-                      return (parseInt(item.time.slice(11,13)) >= 3);
-                    });
-
-                    d3.csv("demoMeal.csv", function(mdata) {
-                      for (var b in breakfast) {
+                    d3.csv("demoGlucose.csv", function(gdata) {
+                      // compare glucose levels with meal times to determine if 'Fasting,' etc.
+                      for (var glucose in gdata) {
+                        // all are 'Random' until proven otherwise
+                        gdata[glucose].flag = 'Random';
                         for (var meal in mdata) {
-                          if (mdata[meal].ID === breakfast[b].ID && mdata[meal].time === breakfast[b].time) {
-                            mdata[meal].isBreakfast = true;
-                          }
-                        }
-                      }
-
-                      d3.csv("demoGlucose.csv", function(gdata) {
-                        var temp = [];
-                        for (var glucose in gdata) {
-                          gdata[glucose].flag = 'Random';
-                          for (var meal in mdata) {
-                            if (gdata[glucose].ID === mdata[meal].ID &&
-                              gdata[glucose].time.slice(0,10) === mdata[meal].time.slice(0,10)) {
-                              var gHour = parseInt(gdata[glucose].time.slice(11,13));
+                          if (gdata[glucose].ID === mdata[meal].ID && gdata[glucose].time.slice(0,10) === mdata[meal].time.slice(0,10)) {
+                            var gHour = parseInt(gdata[glucose].time.slice(11,13));
                             var mHour = parseInt(mdata[meal].time.slice(11,13));
                             var gMinute = parseInt(gdata[glucose].time.slice(14,16));
                             var mMinute = parseInt(mdata[meal].time.slice(14,16));
 
                             // if postprandial
-                            if ((gHour - mHour >= 2 && gHour - mHour <= 3) || 
-                              (gHour - mHour == 1 && gMinute - mMinute >= 0)) {
+                            if ((gHour - mHour == 2) || (gHour - mHour == 3 && gMinute - mMinute <= 0) || (gHour - mHour == 1 && gMinute - mMinute >= 0)) {
                               gdata[glucose].flag = 'Postprandial';
-                            break; 
-                          } else if ((mHour - gHour == 0 && mMinute - gMinute > 0) || 
-                            (mHour - gHour == 1 && mMinute - gMinute <= 0)) {
-                                  // if preprandial
-                                  if (mdata[meal].isBreakfast) {
-                                    // if fasting
-                                    gdata[glucose].flag = 'Fasting';
-                                  } else {
-                                    // if prerandial & not fasting
-                                    gdata[glucose].flag = 'Preprandial';
-                                  }
-                                } 
+                              break; 
+                            } 
+                            // if preprandial
+                            else if ((mHour - gHour == 0 && mMinute - gMinute > 0) || (mHour - gHour == 1 && mMinute - gMinute <= 0)) {
+                              // if fasting
+                              if (mdata[meal].flag === 'Breakfast') {
+                                gdata[glucose].flag = 'Fasting';
+                              } 
+                              else {
+                                // if preprandial & not fasting
+                                if (gdata[glucose].flag != 'Fasting') {
+                                  gdata[glucose].flag = 'Preprandial';
+                                }
                               }
-                            }
+                            } 
                           }
+                        }
+                      }
 
                       // array to keep track of patient IDs
                       var IDArray = [];
@@ -420,7 +425,7 @@
                           }
 
                           var avgFast = Math.round((sumFast/arrFast.length)*100/100);
-
+                          console.log(arrFast);
                           var cell1 = row.insertCell(0);
                           row.onclick = function() {document.getElementById("patID").value = d.ID;};
                           var cell2 = row.insertCell(1);
@@ -451,10 +456,9 @@
                           cell6.innerHTML = '0';
                         }
                       })
-})
-})
-})
-});
+                    })
+                  })
+
 </script>
 </tbody>
 </table>
@@ -658,198 +662,196 @@
               recordMonth();
               recordYear();
 
-              d3.csv("demoMeal.csv", function(meal) {
-                d3.csv("demoMeal.csv", function(breakfast) {
-                  for (var b = breakfast.length - 1; b > -1; b--) {
-                    for (var m = meal.length - 1; m > -1; m--) {
-                      if (meal[m].ID === breakfast[b].ID &&
-                        meal[m].time.slice(0,10) === breakfast[b].time.slice(0,10)) {
-                        var mHour = parseInt(meal[m].time.slice(11,13));
-                      var bHour = parseInt(breakfast[b].time.slice(11,13));
-                      var mMinute = parseInt(meal[m].time.slice(14,16));
-                      var bMinute = parseInt(breakfast[b].time.slice(14,16));
-                      var mSecond = parseInt(meal[m].time.slice(17,19));
-                      var bSecond = parseInt(breakfast[b].time.slice(17,19));
+              d3.csv("demoMeal.csv", function(mdata) {
+                // filter meals to breakfast-only to later determine which glucose measures are 'fasting'
+                var breakfast = [];
+                var date;
+                var id;
+                var hour;
+                var minute;
+                var second;
+                var nextHour;
+                var nextMinute;
+                var nextSecond;
+                for (var i = 0; i < mdata.length; i++) {
+                  date = mdata[i].time.slice(0,10);
+                  id = mdata[i].ID;
+                  hour = parseInt(mdata[i].time.slice(11,13));
+                  minute = parseInt(mdata[i].time.slice(14,16));
+                  second = parseInt(mdata[i].time.slice(17,19));
+                  if (mdata[i].time.slice(11,13) >= 3) {
+                    mdata[i].flag = 'Breakfast';
+                    // compare other mealtimes of the same date with this mealtime to determine which is breakfast
+                    for (var j = 0; j < mdata.length; j++) {
+                      if (mdata[j].ID == id && mdata[j].time.slice(0,10) === date) {
+                        nextHour = parseInt(mdata[j].time.slice(11,13));
+                        nextMinute = parseInt(mdata[j].time.slice(14,16));
+                        nextSecond = parseInt(mdata[j].time.slice(17,19));
 
-                      if (mHour < bHour) {
-                        breakfast.splice(b, 1);
-                        break;
-                      } else if (mHour == bHour) {
-                        if (mMinute < bMinute) {
-                          breakfast.splice(b, 1);
+                        if (nextHour < hour) {
+                          mdata[i].flag = 'notBreakfast';
                           break;
-                        } else if (mMinute == bMinute) {
-                          if (mSecond < bSecond) {
-                            breakfast.splice(b, 1);
+                        } 
+                        else if (nextHour == hour) {
+                          if (nextMinute < minute) {
+                            mdata[i].flag = 'notBreakfast';
                             break;
-                          } else if (mSecond == bSecond) {
-                            continue;
+                          } 
+                          else if (nextMinute == minute) {
+                            if (nextSecond < second) {
+                              mdata[i].flag = 'notBreakfast';
+                              break;
+                            }
                           }
                         }
-                      } else {
-                        meal.splice(m, 1);
                       }
-                    }
+                    } 
+                  } 
+                  else {
+                    mdata[i].flag = 'notBreakfast';
                   }
                 }
-                breakfast = breakfast.filter(function(item) {
-                  return (parseInt(item.time.slice(11,13)) >= 3);
-                });
-
-                d3.csv("demoMeal.csv", function(mdata) {
-                  for (var b in breakfast) {
+                d3.csv("demoGlucose.csv", function(gdata) {
+                  var temp = [];
+                  // compare glucose levels with meal times to determine if 'Fasting,' etc.
+                  for (var glucose in gdata) {
+                    // all are 'Random' until proven otherwise
+                    gdata[glucose].flag = 'Random';
                     for (var meal in mdata) {
-                      if (mdata[meal].ID === breakfast[b].ID && mdata[meal].time === breakfast[b].time) {
-                        mdata[meal].isBreakfast = true;
+                      if (gdata[glucose].ID === mdata[meal].ID && gdata[glucose].time.slice(0,10) === mdata[meal].time.slice(0,10)) {
+                        var gHour = parseInt(gdata[glucose].time.slice(11,13));
+                        var mHour = parseInt(mdata[meal].time.slice(11,13));
+                        var gMinute = parseInt(gdata[glucose].time.slice(14,16));
+                        var mMinute = parseInt(mdata[meal].time.slice(14,16));
+
+                        // if postprandial
+                        if ((gHour - mHour == 2) || (gHour - mHour == 3 && gMinute - mMinute <= 0) || (gHour - mHour == 1 && gMinute - mMinute >= 0)) {
+                          gdata[glucose].flag = 'Postprandial';
+                          break; 
+                        } 
+                        // if preprandial
+                        else if ((mHour - gHour == 0 && mMinute - gMinute > 0) || (mHour - gHour == 1 && mMinute - gMinute <= 0)) {
+                          // if fasting
+                          if (mdata[meal].flag === 'Breakfast') {
+                            gdata[glucose].flag = 'Fasting';
+                          } 
+                          else {
+                            // if preprandial & not fasting
+                            if (gdata[glucose].flag != 'Fasting') {
+                              gdata[glucose].flag = 'Preprandial';
+                            }
+                          }
+                        } 
                       }
                     }
-
                   }
-
-                      // comparing meal time to glucose time
-                      d3.csv("demoGlucose.csv", function(gdata) {
-                        var temp = [];
-                        for (var glucose in gdata) {
-                          gdata[glucose].flag = 'Random';
-                          for (var meal in mdata) {
-                            if (gdata[glucose].ID === mdata[meal].ID &&
-                              gdata[glucose].time.slice(0,10) === mdata[meal].time.slice(0,10)) {
-                              var gHour = parseInt(gdata[glucose].time.slice(11,13));
-                            var mHour = parseInt(mdata[meal].time.slice(11,13));
-                            var gMinute = parseInt(gdata[glucose].time.slice(14,16));
-                            var mMinute = parseInt(mdata[meal].time.slice(14,16));
-
-                            // if postprandial
-                            if ((gHour - mHour >= 2 && gHour - mHour <= 3) || 
-                              (gHour - mHour == 1 && gMinute - mMinute >= 0)) {
-                              gdata[glucose].flag = 'Postprandial';
-                            break; 
-                          } else if ((mHour - gHour == 0 && mMinute - gMinute > 0) || 
-                            (mHour - gHour == 1 && mMinute - gMinute <= 0)) {
-                                // if preprandial
-                                if (mdata[meal].isBreakfast) {
-                                  // if fasting
-                                  gdata[glucose].flag = 'Fasting';
-                                } else {
-                                  // if prerandial & not fasting
-                                  gdata[glucose].flag = 'Preprandial';
-                                }
-                              } 
-                            }
-                          }
-                        }
-
-                        for (var index in gdata) {
-                          if (gdata[index].ID == thisID && parseInt(gdata[index].time.slice(5, 7)) == thisMonth
-                            && parseInt(gdata[index].time.slice(0, 4)) == thisYear) {
-                            if (document.getElementById("Postprandial").checked && gdata[index].flag === 'Postprandial') {
-                              temp.push(gdata[index]);
-                            } else if (document.getElementById("Fasting").checked && gdata[index].flag === 'Fasting') {
-                              temp.push(gdata[index]);
-                            } else if (document.getElementById("Preprandial").checked && gdata[index].flag === 'Preprandial') {
-                              temp.push(gdata[index]);  
-                            } else if (document.getElementById("Random").checked && gdata[index].flag === 'Random') {
-                              temp.push(gdata[index]);
-                            } else if (document.getElementById("All").checked) {
-                              temp.push(gdata[index]);
-                            }
-                          }
-                        }
-
-
-                      // style the circles, set their locations based on data
-                      var circles =
-                      groups.selectAll("circle")
-                      .data(temp)
-                      .enter().append("circle")
-                      .attr("class", "circles")
-                      .attr({
-                        cx: function(d) { return x(+d.time.slice(8, 10)); },
-                        cy: function(d) { return y(+d.glucose); },
-                          r: 8 // size of balls
-                          //id: function(d) { return d.glucose; }
-                        })
-                        // possibility: give a different color for balls based on pre/postprandial
-                        .style("fill", function(d) { return colors[d.flag]; });
-
-
-                      // what to do when we mouse over a bubble
-                      var mouseOn = function() { 
-                        var circle = d3.select(this);
-
-                      // transition to increase size/opacity of bubble
-                      circle.transition()
-                      .duration(800).style("opacity", 1)
-                      .attr("r", 16).ease("elastic");
-
-                        // append lines to bubbles that will be used to show the precise data points.
-                        // translate their location based on margins
-                        svg.append("g")
-                        .attr("class", "guide")
-                        .append("line")
-                        .attr("x1", circle.attr("cx"))
-                        .attr("x2", circle.attr("cx"))
-                        .attr("y1", +circle.attr("cy") + 26)
-                        .attr("y2", h - margin.t - margin.b)
-                        .attr("transform", "translate(40,20)")
-                        .style("stroke", circle.style("fill"))
-                        .transition().delay(200).duration(400).styleTween("opacity", 
-                          function() { return d3.interpolate(0, .5); })
-
-                        svg.append("g")
-                        .attr("class", "guide")
-                        .append("line")
-                        .attr("x1", +circle.attr("cx") - 16)
-                        .attr("x2", 0)
-                        .attr("y1", circle.attr("cy"))
-                        .attr("y2", circle.attr("cy"))
-                        .attr("transform", "translate(40,30)")
-                        .style("stroke", circle.style("fill"))
-                        .transition().delay(200).duration(400).styleTween("opacity", 
-                          function() { return d3.interpolate(0, .5); });
-
-                      // function to move mouseover item to front of SVG stage, in case
-                      // another bubble overlaps it
-                      d3.selection.prototype.moveToFront = function() { 
-                        return this.each(function() { 
-                          this.parentNode.appendChild(this); 
-                        }); 
-                      };
-
-                      // skip this functionality for IE9, which doesn't like it
-                      if (!$.browser.msie) {
-                        circle.moveToFront(); 
+                  // pushing points we are trying to graph to temp[]
+                  for (var index in gdata) {
+                    if (gdata[index].ID == thisID && parseInt(gdata[index].time.slice(5, 7)) == thisMonth && parseInt(gdata[index].time.slice(0, 4)) == thisYear) {
+                      if (document.getElementById("Postprandial").checked && gdata[index].flag === 'Postprandial') {
+                        temp.push(gdata[index]);
+                      } else if (document.getElementById("Fasting").checked && gdata[index].flag === 'Fasting') {
+                        temp.push(gdata[index]);
+                      } else if (document.getElementById("Preprandial").checked && gdata[index].flag === 'Preprandial') {
+                        temp.push(gdata[index]);  
+                      } else if (document.getElementById("Random").checked && gdata[index].flag === 'Random') {
+                        temp.push(gdata[index]);
+                      } else if (document.getElementById("All").checked) {
+                        temp.push(gdata[index]);
                       }
+                    }
+                  }
+                  // style the circles, set their locations based on data
+                  var circles =
+                    groups.selectAll("circle")
+                    .data(temp)
+                    .enter().append("circle")
+                    .attr("class", "circles")
+                    .attr({
+                      cx: function(d) { return x(+d.time.slice(8, 10)); },
+                      cy: function(d) { return y(+d.glucose); },
+                        r: 8 // size of balls
+                        //id: function(d) { return d.glucose; }
+                    })
+                    // possibility: give a different color for balls based on pre/postprandial
+                    .style("fill", function(d) { return colors[d.flag]; });
+
+                  // what to do when we mouse over a bubble
+                  var mouseOn = function() { 
+                    var circle = d3.select(this);
+
+                    // transition to increase size/opacity of bubble
+                    circle.transition()
+                    .duration(800).style("opacity", 1)
+                    .attr("r", 16).ease("elastic");
+
+                    // append lines to bubbles that will be used to show the precise data points.
+                    // translate their location based on margins
+                    svg.append("g")
+                    .attr("class", "guide")
+                    .append("line")
+                    .attr("x1", circle.attr("cx"))
+                    .attr("x2", circle.attr("cx"))
+                    .attr("y1", +circle.attr("cy") + 26)
+                    .attr("y2", h - margin.t - margin.b)
+                    .attr("transform", "translate(40,20)")
+                    .style("stroke", circle.style("fill"))
+                    .transition().delay(200).duration(400).styleTween("opacity", 
+                      function() { return d3.interpolate(0, .5); })
+
+                    svg.append("g")
+                    .attr("class", "guide")
+                    .append("line")
+                    .attr("x1", +circle.attr("cx") - 16)
+                    .attr("x2", 0)
+                    .attr("y1", circle.attr("cy"))
+                    .attr("y2", circle.attr("cy"))
+                    .attr("transform", "translate(40,30)")
+                    .style("stroke", circle.style("fill"))
+                    .transition().delay(200).duration(400).styleTween("opacity", 
+                      function() { return d3.interpolate(0, .5); });
+
+                    // function to move mouseover item to front of SVG stage, in case
+                    // another bubble overlaps it
+                    d3.selection.prototype.moveToFront = function() { 
+                      return this.each(function() { 
+                        this.parentNode.appendChild(this); 
+                      }); 
                     };
-                      // what happens when we leave a bubble?
-                      var mouseOff = function() {
-                        var circle = d3.select(this);
 
-                        // go back to original size and opacity
-                        circle.transition()
-                        .duration(800).style("opacity", .5)
-                        .attr("r", 8).ease("elastic");
+                    // skip this functionality for IE9, which doesn't like it
+                    if (!$.browser.msie) {
+                      circle.moveToFront(); 
+                    }
+                  };
+                  // what happens when we leave a bubble?
+                  var mouseOff = function() {
+                    var circle = d3.select(this);
 
-                        // fade out guide lines, then remove them
-                        d3.selectAll(".guide").transition().duration(100).styleTween("opacity", 
-                          function() { return d3.interpolate(.5, 0); })
-                        .remove()
-                      };
+                    // go back to original size and opacity
+                    circle.transition()
+                    .duration(800).style("opacity", .5)
+                    .attr("r", 8).ease("elastic");
 
-                      // run the mouseon/out functions
-                      circles.on("mouseover", mouseOn);
-                      circles.on("mouseout", mouseOff);
+                    // fade out guide lines, then remove them
+                    d3.selectAll(".guide").transition().duration(100).styleTween("opacity", 
+                      function() { return d3.interpolate(.5, 0); })
+                      .remove()
+                  };
 
-                      // control what shows after hovering mouse over a ball
-                      circles.append("title")
-                      .text(function(d) { return d.glucose + " mg/dL"; })
+                  // run the mouseon/out functions
+                  circles.on("mouseover", mouseOn);
+                  circles.on("mouseout", mouseOff);
 
-                      $(".circles").tipsy({ gravity: 's', });
-                    });
-});
-});
-});
-}
+                  // control what shows after hovering mouse over a ball
+                  circles.append("title")
+                  .text(function(d) { return d.glucose + " mg/dL"; })
+
+                  $(".circles").tipsy({ gravity: 's', });
+                }) // closes d3.csv                
+              }) // closes d3.csv
+            } // closes function updateGraph()
+
 </script>
 
 
@@ -936,263 +938,267 @@ function recordBelow() {
             if (mm < 10) {
               mm = '0' + mm;
             }
+
             var lastMonth = mm - 1;
             var lastYear = yyyy;
             if (mm == 1) {
               lastMonth = 12;
               lastYear = yyyy - 1;
             }
-            // start going through data 
-            d3.csv("demoMeal.csv", function(meal) {
-              d3.csv("demoMeal.csv", function(breakfast) {
-                for (var b = breakfast.length - 1; b > -1; b--) {
-                  for (var m = meal.length - 1; m > -1; m--) {
-                    if (meal[m].ID === breakfast[b].ID &&
-                      meal[m].time.slice(0,10) === breakfast[b].time.slice(0,10)) {
-                      var mHour = parseInt(meal[m].time.slice(11,13));
-                    var bHour = parseInt(breakfast[b].time.slice(11,13));
-                    var mMinute = parseInt(meal[m].time.slice(14,16));
-                    var bMinute = parseInt(breakfast[b].time.slice(14,16));
-                    var mSecond = parseInt(meal[m].time.slice(17,19));
-                    var bSecond = parseInt(breakfast[b].time.slice(17,19));
 
-                    if (mHour < bHour) {
-                      breakfast.splice(b, 1);
-                      break;
-                    } else if (mHour == bHour) {
-                      if (mMinute < bMinute) {
-                        breakfast.splice(b, 1);
+            d3.csv("demoMeal.csv", function(mdata) {
+              // filter meals to breakfast-only to later determine which glucose measures are 'fasting'
+              var breakfast = [];
+              var date;
+              var id;
+              var hour;
+              var minute;
+              var second;
+              var nextHour;
+              var nextMinute;
+              var nextSecond;
+              for (var i = 0; i < mdata.length; i++) {
+                date = mdata[i].time.slice(0,10);
+                id = mdata[i].ID;
+                hour = parseInt(mdata[i].time.slice(11,13));
+                minute = parseInt(mdata[i].time.slice(14,16));
+                second = parseInt(mdata[i].time.slice(17,19));
+                if (mdata[i].time.slice(11,13) >= 3) {
+                  mdata[i].flag = 'Breakfast';
+                  // compare other mealtimes of the same date with this mealtime to determine which is breakfast
+                  for (var j = 0; j < mdata.length; j++) {
+                    if (mdata[j].ID == id && mdata[j].time.slice(0,10) === date) {
+                      nextHour = parseInt(mdata[j].time.slice(11,13));
+                      nextMinute = parseInt(mdata[j].time.slice(14,16));
+                      nextSecond = parseInt(mdata[j].time.slice(17,19));
+
+                      if (nextHour < hour) {
+                        mdata[i].flag = 'notBreakfast';
                         break;
-                      } else if (mMinute == bMinute) {
-                        if (mSecond < bSecond) {
-                          breakfast.splice(b, 1);
+                      } 
+                      else if (nextHour == hour) {
+                        if (nextMinute < minute) {
+                          mdata[i].flag = 'notBreakfast';
                           break;
-                        } else if (mSecond == bSecond) {
-                          continue;
+                        } 
+                        else if (nextMinute == minute) {
+                          if (nextSecond < second) {
+                            mdata[i].flag = 'notBreakfast';
+                            break;
+                          }
                         }
                       }
-                    } else {
-                      meal.splice(m, 1);
                     }
-                  }
+                  } 
+                } 
+                else {
+                  mdata[i].flag = 'notBreakfast';
                 }
               }
-              breakfast = breakfast.filter(function(item) {
-                return (parseInt(item.time.slice(11,13)) >= 3);
-              });
-              d3.csv("demoMeal.csv", function(mdata) {
-                for (var b in breakfast) {
+              d3.csv("demoGlucose.csv", function(gdata) {
+                var temp = [];
+                // compare glucose levels with meal times to determine if 'Fasting,' etc.
+                for (var glucose in gdata) {
+                  // all are 'Random' until proven otherwise
+                  gdata[glucose].flag = 'Random';
                   for (var meal in mdata) {
-                    if (mdata[meal].ID === breakfast[b].ID && mdata[meal].time === breakfast[b].time) {
-                      mdata[meal].isBreakfast = true;
+                    if (gdata[glucose].ID === mdata[meal].ID && gdata[glucose].time.slice(0,10) === mdata[meal].time.slice(0,10)) {
+                      var gHour = parseInt(gdata[glucose].time.slice(11,13));
+                      var mHour = parseInt(mdata[meal].time.slice(11,13));
+                      var gMinute = parseInt(gdata[glucose].time.slice(14,16));
+                      var mMinute = parseInt(mdata[meal].time.slice(14,16));
+
+                      // if postprandial
+                      if ((gHour - mHour == 2) || (gHour - mHour == 3 && gMinute - mMinute <= 0) || (gHour - mHour == 1 && gMinute - mMinute >= 0)) {
+                        gdata[glucose].flag = 'Postprandial';
+                        break; 
+                      } 
+                      // if preprandial
+                      else if ((mHour - gHour == 0 && mMinute - gMinute > 0) || (mHour - gHour == 1 && mMinute - gMinute <= 0)) {
+                        // if fasting
+                        if (mdata[meal].flag === 'Breakfast') {
+                          gdata[glucose].flag = 'Fasting';
+                        } 
+                        else {
+                          // if preprandial & not fasting
+                          if (gdata[glucose].flag != 'Fasting') {
+                            gdata[glucose].flag = 'Preprandial';
+                          }
+                        }
+                      } 
                     }
                   }
                 }
 
-                d3.csv("demoGlucose.csv", function(gdata) {
-                  var temp = [];
-                  for (var glucose in gdata) {
-                    gdata[glucose].flag = 'Random';
-                    for (var meal in mdata) {
-                        // if ID and date matches
-                        if (gdata[glucose].ID === mdata[meal].ID &&
-                          gdata[glucose].time.slice(0,10) === mdata[meal].time.slice(0,10)) {
-                          var gHour = parseInt(gdata[glucose].time.slice(11,13));
-                        var mHour = parseInt(mdata[meal].time.slice(11,13));
-                        var gMinute = parseInt(gdata[glucose].time.slice(14,16));
-                        var mMinute = parseInt(mdata[meal].time.slice(14,16));
+                // array to keep track of patient IDs
+                var IDArray = [];
 
-                          // if postprandial
-                          if ((gHour - mHour >= 2 && gHour - mHour <= 3) || 
-                            (gHour - mHour == 1 && gMinute - mMinute >= 0)) {
-                            gdata[glucose].flag = 'Postprandial';
-                          break; 
-                        } else if ((mHour - gHour == 0 && mMinute - gMinute > 0) || 
-                          (mHour - gHour == 1 && mMinute - gMinute <= 0)) {
-                            // if preprandial
-                            if (mdata[meal].isBreakfast) {
-                              // if fasting
-                              gdata[glucose].flag = 'Fasting';
-                            } else {
-                              // if prerandial & not fasting
-                              gdata[glucose].flag = 'Preprandial';
-                            }
-                          } 
-                        }
+                // filter through preprandial, postprandial, etc., for updating the table
+                var lastMonthGlucData = gdata.filter(function(item) {
+                  if (parseInt(item.time.slice(5, 7)) == lastMonth 
+                    && parseInt(item.time.slice(0, 4)) == lastYear) {
+                    if (document.getElementById("AllTable").checked) {
+                      return true;
+                    } else if (document.getElementById("PostprandialTable").checked) {
+                      return (item.flag === 'Postprandial');
+                    } else if (document.getElementById("PreprandialTable").checked) {
+                      return (item.flag === 'Preprandial');
+                    } else if (document.getElementById("FastingTable").checked) {
+                      return (item.flag === 'Fasting');
+                    } else if (document.getElementById("RandomTable").checked) {
+                      return (item.flag === 'Random');
+                    }
+                  }
+                });
+
+                var thisMonthGlucData = gdata.filter(function(item) {
+                  if (parseInt(item.time.slice(5, 7)) == mm 
+                    && parseInt(item.time.slice(0, 4)) == yyyy) {
+                    if (document.getElementById("AllTable").checked) {
+                      return true;
+                    } else if (document.getElementById("PostprandialTable").checked) {
+                      return (item.flag === 'Postprandial');
+                    } else if (document.getElementById("PreprandialTable").checked) {
+                      return (item.flag === 'Preprandial');
+                    } else if (document.getElementById("FastingTable").checked) {
+                      return (item.flag === 'Fasting');
+                    } else if (document.getElementById("RandomTable").checked) {
+                      return (item.flag === 'Random');
+                    }
+                  }
+                });
+
+                // loop through this month to compare
+                thisMonthGlucData.forEach(function(d,i) {
+                  var arrFast = [];
+                  var arrPre = [];
+                  var arrPost = [];
+                  var arrRand = [];
+                  var tempID = d.ID;
+                  // function to check if this ID is already in IDArray. Does not work on IE6, 7, 8.
+                  function isIncluded(arr,obj) {
+                    return (arr.indexOf(obj) != -1);
+                  }
+
+                  // check if ID is already used, so only one patient summary is shown per table row
+                  if (!isIncluded(IDArray, tempID)) {
+                    // push tempID to IDArray to log it
+                    IDArray.push(tempID);
+                    
+                    //calculate averages of fasting, pre, post, etc. filtered by month and year
+                    for (var index in thisMonthGlucData) {
+                      if (thisMonthGlucData[index].ID == tempID && thisMonthGlucData[index].flag == 'Postprandial') {
+                        arrPost.push(thisMonthGlucData[index].glucose);
+                      }
+                      if (thisMonthGlucData[index].ID == tempID && thisMonthGlucData[index].flag == 'Preprandial') {
+                        arrPre.push(thisMonthGlucData[index].glucose);
+                      }
+                      if (thisMonthGlucData[index].ID == tempID && thisMonthGlucData[index].flag == 'Random') {
+                        arrRand.push(thisMonthGlucData[index].glucose);
+                      }
+                      if (thisMonthGlucData[index].ID == tempID && thisMonthGlucData[index].flag == 'Fasting') {
+                        arrFast.push(thisMonthGlucData[index].glucose);
+                      }
+                    }
+                    // calculate sums / averages
+                    var sumPost = 0;
+                    for (var i = 0; i < arrPost.length; i++) {
+                      sumPost += parseInt(arrPost[i]);
+                    }
+                    var avgPost = Math.round((sumPost/arrPost.length)*100/100);
+
+                    var sumPre = 0;
+                    for (var i = 0; i < arrPre.length; i++) {
+                      sumPre += parseInt(arrPre[i]);
+                    }
+                    var avgPre = Math.round((sumPre/arrPre.length)*100/100);
+
+                    var sumRand = 0;
+                    for (var i = 0; i < arrRand.length; i++) {
+                      sumRand += parseInt(arrRand[i]);
+                    }
+                    var avgRand = Math.round((sumRand/arrRand.length)*100/100);
+                    
+                    var sumFast = 0;
+                    for (var i = 0; i < arrFast.length; i++) {
+                      sumFast += parseInt(arrFast[i]);
+                    }
+                    var avgFast = Math.round((sumFast/arrFast.length)*100/100);
+
+                    // loop through last month to compare
+                    var arrFast2 = [];
+                    var arrPre2 = [];
+                    var arrPost2 = [];
+                    var arrRand2 = [];
+                    for (var index in lastMonthGlucData) {
+                      if (lastMonthGlucData[index].ID == tempID && lastMonthGlucData[index].flag == 'Postprandial') {
+                        arrPost2.push(lastMonthGlucData[index].glucose);
+                      }
+                      if (lastMonthGlucData[index].ID == tempID && lastMonthGlucData[index].flag == 'Preprandial') {
+                        arrPre2.push(lastMonthGlucData[index].glucose);
+                      }
+                      if (lastMonthGlucData[index].ID == tempID && lastMonthGlucData[index].flag == 'Random') {
+                        arrRand2.push(lastMonthGlucData[index].glucose);
+                      }
+                      if (lastMonthGlucData[index].ID == tempID && lastMonthGlucData[index].flag == 'Fasting') {
+                        arrFast2.push(lastMonthGlucData[index].glucose);
                       }
                     }
 
-                    // array to keep track of patient IDs
-                    var IDArray = [];
+                    // calculate sums / averages
+                    var sumPost2 = 0;
+                    for (var i = 0; i < arrPost2.length; i++) {
+                      sumPost2 += parseInt(arrPost2[i]);
+                      console.log(sumPost);
+                    }
+                    var avgPost2 = Math.round((sumPost2/arrPost2.length)*100/100);
 
-                    // filter through preprandial, postprandial, etc., for updating the table
-                    var lastMonthGlucData = gdata.filter(function(item) {
-                      if (parseInt(item.time.slice(5, 7)) == lastMonth 
-                        && parseInt(item.time.slice(0, 4)) == lastYear) {
-                        if (document.getElementById("AllTable").checked) {
-                          return true;
-                        } else if (document.getElementById("PostprandialTable").checked) {
-                          return (item.flag === 'Postprandial');
-                        } else if (document.getElementById("PreprandialTable").checked) {
-                          return (item.flag === 'Preprandial');
-                        } else if (document.getElementById("FastingTable").checked) {
-                          return (item.flag === 'Fasting');
-                        } else if (document.getElementById("RandomTable").checked) {
-                          return (item.flag === 'Random');
-                        }
-                      }
-                    });
+                    var sumPre2 = 0;
+                    for (var i = 0; i < arrPre2.length; i++) {
+                      sumPre2 += parseInt(arrPre2[i]);
+                    }
+                    var avgPre2 = Math.round((sumPre2/arrPre2.length)*100/100);
 
-                    var thisMonthGlucData = gdata.filter(function(item) {
-                      if (parseInt(item.time.slice(5, 7)) == mm 
-                        && parseInt(item.time.slice(0, 4)) == yyyy) {
-                        if (document.getElementById("AllTable").checked) {
-                          return true;
-                        } else if (document.getElementById("PostprandialTable").checked) {
-                          return (item.flag === 'Postprandial');
-                        } else if (document.getElementById("PreprandialTable").checked) {
-                          return (item.flag === 'Preprandial');
-                        } else if (document.getElementById("FastingTable").checked) {
-                          return (item.flag === 'Fasting');
-                        } else if (document.getElementById("RandomTable").checked) {
-                          return (item.flag === 'Random');
-                        }
-                      }
-                    });
+                    var sumRand2 = 0;
+                    for (var i = 0; i < arrRand2.length; i++) {
+                      sumRand2 += parseInt(arrRand2[i]);
+                    }
+                    var avgRand2 = Math.round((sumRand2/arrRand2.length)*100/100);
+                    
+                    var sumFast2 = 0;
+                    for (var i = 0; i < arrFast2.length; i++) {
+                      sumFast2 += parseInt(arrFast2[i]);
+                    }
+                    var avgFast2 = Math.round((sumFast2/arrFast2.length)*100/100);
 
-                    // loop through this month to compare
-                    thisMonthGlucData.forEach(function(d,i) {
-                      var arrFast = [];
-                      var arrPre = [];
-                      var arrPost = [];
-                      var arrRand = [];
-                      var tempID = d.ID;
-                      // function to check if this ID is already in IDArray. Does not work on IE6, 7, 8.
-                      function isIncluded(arr,obj) {
-                        return (arr.indexOf(obj) != -1);
-                      }
-
-                      // check if ID is already used, so only one patient summary is shown per table row
-                      if (!isIncluded(IDArray, tempID)) {
-                        // push tempID to IDArray to log it
-                        IDArray.push(tempID);
-                        
-                        //calculate averages of fasting, pre, post, etc. filtered by month and year
-                        for (var index in thisMonthGlucData) {
-                          if (thisMonthGlucData[index].ID == tempID && thisMonthGlucData[index].flag == 'Postprandial') {
-                            arrPost.push(thisMonthGlucData[index].glucose);
-                          }
-                          if (thisMonthGlucData[index].ID == tempID && thisMonthGlucData[index].flag == 'Preprandial') {
-                            arrPre.push(thisMonthGlucData[index].glucose);
-                          }
-                          if (thisMonthGlucData[index].ID == tempID && thisMonthGlucData[index].flag == 'Random') {
-                            arrRand.push(thisMonthGlucData[index].glucose);
-                          }
-                          if (thisMonthGlucData[index].ID == tempID && thisMonthGlucData[index].flag == 'Fasting') {
-                            arrFast.push(thisMonthGlucData[index].glucose);
-                          }
-                        }
-                        // calculate sums / averages
-                        var sumPost = 0;
-                        for (var i = 0; i < arrPost.length; i++) {
-                          sumPost += parseInt(arrPost[i]);
-                        }
-                        var avgPost = Math.round((sumPost/arrPost.length)*100/100);
-
-                        var sumPre = 0;
-                        for (var i = 0; i < arrPre.length; i++) {
-                          sumPre += parseInt(arrPre[i]);
-                        }
-                        var avgPre = Math.round((sumPre/arrPre.length)*100/100);
-
-                        var sumRand = 0;
-                        for (var i = 0; i < arrRand.length; i++) {
-                          sumRand += parseInt(arrRand[i]);
-                        }
-                        var avgRand = Math.round((sumRand/arrRand.length)*100/100);
-                        
-                        var sumFast = 0;
-                        for (var i = 0; i < arrFast.length; i++) {
-                          sumFast += parseInt(arrFast[i]);
-                        }
-                        var avgFast = Math.round((sumFast/arrFast.length)*100/100);
-
-                        // loop through last month to compare
-                        var arrFast2 = [];
-                        var arrPre2 = [];
-                        var arrPost2 = [];
-                        var arrRand2 = [];
-                        for (var index in lastMonthGlucData) {
-                          if (lastMonthGlucData[index].ID == tempID && lastMonthGlucData[index].flag == 'Postprandial') {
-                            arrPost2.push(lastMonthGlucData[index].glucose);
-                          }
-                          if (lastMonthGlucData[index].ID == tempID && lastMonthGlucData[index].flag == 'Preprandial') {
-                            arrPre2.push(lastMonthGlucData[index].glucose);
-                          }
-                          if (lastMonthGlucData[index].ID == tempID && lastMonthGlucData[index].flag == 'Random') {
-                            arrRand2.push(lastMonthGlucData[index].glucose);
-                          }
-                          if (lastMonthGlucData[index].ID == tempID && lastMonthGlucData[index].flag == 'Fasting') {
-                            arrFast2.push(lastMonthGlucData[index].glucose);
-                          }
-                        }
-
-                        // calculate sums / averages
-                        var sumPost2 = 0;
-                        for (var i = 0; i < arrPost2.length; i++) {
-                          sumPost2 += parseInt(arrPost2[i]);
-                          console.log(sumPost);
-                        }
-                        var avgPost2 = Math.round((sumPost2/arrPost2.length)*100/100);
-
-                        var sumPre2 = 0;
-                        for (var i = 0; i < arrPre2.length; i++) {
-                          sumPre2 += parseInt(arrPre2[i]);
-                        }
-                        var avgPre2 = Math.round((sumPre2/arrPre2.length)*100/100);
-
-                        var sumRand2 = 0;
-                        for (var i = 0; i < arrRand2.length; i++) {
-                          sumRand2 += parseInt(arrRand2[i]);
-                        }
-                        var avgRand2 = Math.round((sumRand2/arrRand2.length)*100/100);
-                        
-                        var sumFast2 = 0;
-                        for (var i = 0; i < arrFast2.length; i++) {
-                          sumFast2 += parseInt(arrFast2[i]);
-                        }
-                        var avgFast2 = Math.round((sumFast2/arrFast2.length)*100/100);
-
-                        // which check boxes are checked to display the data
-                        if (document.getElementById("AllTable").checked && 
-                          ((avgRand - avgRand2 >= monthlyAvgIncrease) ||
-                          (avgPost - avgPost2 >= monthlyAvgIncrease) ||
-                          (avgPre - avgPre2 >= monthlyAvgIncrease) ||
-                          (avgFast - avgFast2 >= monthlyAvgIncrease))) {
-                          updateTableMonthlyHelper(tempID, avgFast, avgPre, avgPost, avgRand);
-                        }
-                        if (document.getElementById("RandomTable").checked && 
-                          avgRand - avgRand2 >= monthlyAvgIncrease) {
-                          updateTableMonthlyHelper(tempID, avgFast, avgPre, avgPost, avgRand);
-                        }
-                        if (document.getElementById("PostprandialTable").checked && 
-                          avgpPost - avgPost2 >= monthlyAvgIncrease) {
-                          updateTableMonthlyHelper(tempID, avgFast, avgPre, avgPost, avgRand);
-                        }
-                        if (document.getElementById("PreprandialTable").checked && 
-                          avgPre - avgPre2 >= monthlyAvgIncrease) {   
-                          updateTableMonthlyHelper(tempID, avgFast, avgPre, avgPost, avgRand);
-                        }
-                        if (document.getElementById("FastingTable").checked && 
-                          avgFast - avgFast2 >= monthlyAvgIncrease) {
-                          updateTableMonthlyHelper(tempID, avgFast, avgPre, avgPost, avgRand);
-                        }
-                      }
-                    })
-                  })
-                })
-              })
-            })
+                    // which check boxes are checked to display the data
+                    if (document.getElementById("AllTable").checked && 
+                      ((avgRand - avgRand2 >= monthlyAvgIncrease) ||
+                      (avgPost - avgPost2 >= monthlyAvgIncrease) ||
+                      (avgPre - avgPre2 >= monthlyAvgIncrease) ||
+                      (avgFast - avgFast2 >= monthlyAvgIncrease))) {
+                      updateTableMonthlyHelper(tempID, avgFast, avgPre, avgPost, avgRand);
+                    }
+                    if (document.getElementById("RandomTable").checked && 
+                      avgRand - avgRand2 >= monthlyAvgIncrease) {
+                      updateTableMonthlyHelper(tempID, avgFast, avgPre, avgPost, avgRand);
+                    }
+                    if (document.getElementById("PostprandialTable").checked && 
+                      avgPost - avgPost2 >= monthlyAvgIncrease) {
+                      updateTableMonthlyHelper(tempID, avgFast, avgPre, avgPost, avgRand);
+                    }
+                    if (document.getElementById("PreprandialTable").checked && 
+                      avgPre - avgPre2 >= monthlyAvgIncrease) {   
+                      updateTableMonthlyHelper(tempID, avgFast, avgPre, avgPost, avgRand);
+                    }
+                    if (document.getElementById("FastingTable").checked && 
+                      avgFast - avgFast2 >= monthlyAvgIncrease) {
+                      updateTableMonthlyHelper(tempID, avgFast, avgPre, avgPost, avgRand);
+                    }
+                  }
+                }) // ends for each
+              }) // ends d3.csv
+            }) // ends d3.csv
           }
 
           function updateTableMonthlyHelper(tempID, avgFast, avgPre, avgPost, avgRand) {
@@ -1232,6 +1238,7 @@ function recordBelow() {
           }
           // function to update the Table according to specific thresholds set by practitioners
           function updateTable() {
+
             var table = document.getElementById("dataTable");
             for (var i = table.rows.length - 1; i > 0; i--) {
               table.deleteRow(i);
@@ -1241,92 +1248,97 @@ function recordBelow() {
             recordBelow();
             recordMonthTable();
             recordYearTable();
-            d3.csv("demoMeal.csv", function(meal) {
-              d3.csv("demoMeal.csv", function(breakfast) {
-                for (var b = breakfast.length - 1; b > -1; b--) {
-                  for (var m = meal.length - 1; m > -1; m--) {
-                    if (meal[m].ID === breakfast[b].ID &&
-                      meal[m].time.slice(0,10) === breakfast[b].time.slice(0,10)) {
-                      var mHour = parseInt(meal[m].time.slice(11,13));
-                    var bHour = parseInt(breakfast[b].time.slice(11,13));
-                    var mMinute = parseInt(meal[m].time.slice(14,16));
-                    var bMinute = parseInt(breakfast[b].time.slice(14,16));
-                    var mSecond = parseInt(meal[m].time.slice(17,19));
-                    var bSecond = parseInt(breakfast[b].time.slice(17,19));
 
-                    if (mHour < bHour) {
-                      breakfast.splice(b, 1);
-                      break;
-                    } else if (mHour == bHour) {
-                      if (mMinute < bMinute) {
-                        breakfast.splice(b, 1);
+            d3.csv("demoMeal.csv", function(mdata) {
+              // filter meals to breakfast-only to later determine which glucose measures are 'fasting'
+              var breakfast = [];
+              var date;
+              var id;
+              var hour;
+              var minute;
+              var second;
+              var nextHour;
+              var nextMinute;
+              var nextSecond;
+              for (var i = 0; i < mdata.length; i++) {
+                date = mdata[i].time.slice(0,10);
+                id = mdata[i].ID;
+                hour = parseInt(mdata[i].time.slice(11,13));
+                minute = parseInt(mdata[i].time.slice(14,16));
+                second = parseInt(mdata[i].time.slice(17,19));
+                if (mdata[i].time.slice(11,13) >= 3) {
+                  mdata[i].flag = 'Breakfast';
+                  // compare other mealtimes of the same date with this mealtime to determine which is breakfast
+                  for (var j = 0; j < mdata.length; j++) {
+                    if (mdata[j].ID == id && mdata[j].time.slice(0,10) === date) {
+                      nextHour = parseInt(mdata[j].time.slice(11,13));
+                      nextMinute = parseInt(mdata[j].time.slice(14,16));
+                      nextSecond = parseInt(mdata[j].time.slice(17,19));
+
+                      if (nextHour < hour) {
+                        mdata[i].flag = 'notBreakfast';
                         break;
-                      } else if (mMinute == bMinute) {
-                        if (mSecond < bSecond) {
-                          breakfast.splice(b, 1);
+                      } 
+                      else if (nextHour == hour) {
+                        if (nextMinute < minute) {
+                          mdata[i].flag = 'notBreakfast';
                           break;
-                        } else if (mSecond == bSecond) {
-                          continue;
+                        } 
+                        else if (nextMinute == minute) {
+                          if (nextSecond < second) {
+                            mdata[i].flag = 'notBreakfast';
+                            break;
+                          }
                         }
                       }
-                    } else {
-                      meal.splice(m, 1);
                     }
-                  }
+                  } 
+                } 
+                else {
+                  mdata[i].flag = 'notBreakfast';
                 }
               }
-              breakfast = breakfast.filter(function(item) {
-                return (parseInt(item.time.slice(11,13)) >= 3);
-              });
-              d3.csv("demoMeal.csv", function(mdata) {
-                for (var b in breakfast) {
+              d3.csv("demoGlucose.csv", function(gdata) {
+                var temp = [];
+                // compare glucose levels with meal times to determine if 'Fasting,' etc.
+                for (var glucose in gdata) {
+                  // all are 'Random' until proven otherwise
+                  gdata[glucose].flag = 'Random';
                   for (var meal in mdata) {
-                    if (mdata[meal].ID === breakfast[b].ID && mdata[meal].time === breakfast[b].time) {
-                      mdata[meal].isBreakfast = true;
-                    }
-                  }
-                }
-
-                d3.csv("demoGlucose.csv", function(gdata) {
-                  var temp = [];
-                  for (var glucose in gdata) {
-                    gdata[glucose].flag = 'Random';
-                    for (var meal in mdata) {
-                      if (gdata[glucose].ID === mdata[meal].ID &&
-                        gdata[glucose].time.slice(0,10) === mdata[meal].time.slice(0,10)) {
-                        var gHour = parseInt(gdata[glucose].time.slice(11,13));
+                    if (gdata[glucose].ID === mdata[meal].ID && gdata[glucose].time.slice(0,10) === mdata[meal].time.slice(0,10)) {
+                      var gHour = parseInt(gdata[glucose].time.slice(11,13));
                       var mHour = parseInt(mdata[meal].time.slice(11,13));
                       var gMinute = parseInt(gdata[glucose].time.slice(14,16));
                       var mMinute = parseInt(mdata[meal].time.slice(14,16));
 
                       // if postprandial
-                      if ((gHour - mHour >= 2 && gHour - mHour <= 3) || 
-                        (gHour - mHour == 1 && gMinute - mMinute >= 0)) {
+                      if ((gHour - mHour == 2) || (gHour - mHour == 3 && gMinute - mMinute <= 0) || (gHour - mHour == 1 && gMinute - mMinute >= 0)) {
                         gdata[glucose].flag = 'Postprandial';
-                      break; 
-                    } else if ((mHour - gHour == 0 && mMinute - gMinute > 0) || 
-                      (mHour - gHour == 1 && mMinute - gMinute <= 0)) {
-                          // if preprandial
-                          if (mdata[meal].isBreakfast) {
-                            // if fasting
-                            gdata[glucose].flag = 'Fasting';
-                          } else {
-                            // if prerandial & not fasting
+                        break; 
+                      } 
+                      // if preprandial
+                      else if ((mHour - gHour == 0 && mMinute - gMinute > 0) || (mHour - gHour == 1 && mMinute - gMinute <= 0)) {
+                        // if fasting
+                        if (mdata[meal].flag === 'Breakfast') {
+                          gdata[glucose].flag = 'Fasting';
+                        } 
+                        else {
+                          // if preprandial & not fasting
+                          if (gdata[glucose].flag != 'Fasting') {
                             gdata[glucose].flag = 'Preprandial';
                           }
-                        } 
-                      }
+                        }
+                      } 
                     }
                   }
+                }
 
                 // array to keep track of patient IDs
                 var IDArray = [];
 
                 // filter through preprandial, postprandial, etc., for updating the table
                 var gdatafilter = gdata.filter(function(item) {
-                  if (parseInt(item.time.slice(5, 7)) == tableMonth
-                    && parseInt(item.time.slice(0, 4)) == tableYear 
-                    && (parseInt(item.glucose) > upper || parseInt(item.glucose) < lower)) {
+                  if (parseInt(item.time.slice(5, 7)) == tableMonth && parseInt(item.time.slice(0, 4)) == tableYear && (parseInt(item.glucose) > upper || parseInt(item.glucose) < lower)) {
                     if (document.getElementById("AllTable").checked) {
                       return true;
                     } else if (document.getElementById("PostprandialTable").checked) {
@@ -1341,7 +1353,23 @@ function recordBelow() {
                   }
                 });
 
+                var gdatafilter2 = gdata.filter(function(item) {
+                  if (parseInt(item.time.slice(5, 7)) == tableMonth && parseInt(item.time.slice(0, 4)) == tableYear) {
+                    if (document.getElementById("AllTable").checked) {
+                      return true;
+                    } else if (document.getElementById("PostprandialTable").checked) {
+                      return (item.flag === 'Postprandial');
+                    } else if (document.getElementById("PreprandialTable").checked) {
+                      return (item.flag === 'Preprandial');
+                    } else if (document.getElementById("FastingTable").checked) {
+                      return (item.flag === 'Fasting');
+                    } else if (document.getElementById("RandomTable").checked) {
+                      return (item.flag === 'Random');
+                    }
+                  }
+                });
 
+                // use gdatafilter to search criteria, gdatafilter2 to keep original averagers in the table
                 gdatafilter.forEach(function(d,i) {
                   // need these to keep track of sums and calculate avg
                   var arrFast = [];
@@ -1364,18 +1392,18 @@ function recordBelow() {
                     IDArray.push(tempID);
                     
                     //calculate averages of fasting, pre, post, etc. filtered by month and year
-                    for (var index in gdatafilter) {
-                      if (gdatafilter[index].ID == tempID && gdatafilter[index].flag == 'Postprandial') {
-                        arrPost.push(gdatafilter[index].glucose);
+                    for (var index in gdatafilter2) {        
+                      if (gdatafilter2[index].ID == tempID && gdatafilter2[index].flag == 'Postprandial') {
+                        arrPost.push(gdatafilter2[index].glucose);
                       }
-                      if (gdatafilter[index].ID == tempID && gdatafilter[index].flag == 'Preprandial') {
-                        arrPre.push(gdatafilter[index].glucose);
+                      if (gdatafilter2[index].ID == tempID && gdatafilter2[index].flag == 'Preprandial') {
+                        arrPre.push(gdatafilter2[index].glucose);
                       }
-                      if (gdatafilter[index].ID == tempID && gdatafilter[index].flag == 'Random') {
-                        arrRand.push(gdatafilter[index].glucose);
+                      if (gdatafilter2[index].ID == tempID && gdatafilter2[index].flag == 'Random') {
+                        arrRand.push(gdatafilter2[index].glucose);
                       }
-                      if (gdatafilter[index].ID == tempID && gdatafilter[index].flag == 'Fasting') {
-                        arrFast.push(gdatafilter[index].glucose);
+                      if (gdatafilter2[index].ID == tempID && gdatafilter2[index].flag == 'Fasting') {
+                        arrFast.push(gdatafilter2[index].glucose);
                       }
                     }
                     // calculate sums / averages
@@ -1404,7 +1432,7 @@ function recordBelow() {
                     }
 
                     var avgFast = Math.round((sumFast/arrFast.length)*100/100);
-
+                    console.log(arrFast);
                     var cell1 = row.insertCell(0);
                     row.onclick = function() {document.getElementById("patID").value = d.ID;};
                     var cell2 = row.insertCell(1);
@@ -1434,17 +1462,10 @@ function recordBelow() {
                     cell5.innerHTML = avgRand;
                     cell6.innerHTML = '0';
                   }
-                })
-})
-})
-})
-});
-
-
-
-
-
-}
+                }) // ends gdatafilter for each
+              })
+            })
+          }
 
 </script>
 </div>
